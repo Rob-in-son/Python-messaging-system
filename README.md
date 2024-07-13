@@ -92,13 +92,9 @@ ngrok http http://localhost:80
 ```
 ## API Endpoints
 
-/: Main endpoint for sending emails and logging
-
-?sendmail=email@example.com: Sends an email to the specified address
-?talktome: Logs the current time
-
-
-/logs: Displays the application logs
+- `http://<ngrok-url>/?sendmail=email@example.com`: Sends an email to the specified address
+- `http://<ngrok-url>/?talktome`: Logs the current time
+- `http://<ngrok-url>//logs`: Displays the application logs
 
 ## Troubleshooting
 
