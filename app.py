@@ -1,4 +1,4 @@
-from flask import Flask, request, Response, stream_with_context
+from flask import Flask, request, Response, stream_with_context, render_template
 from celery import Celery
 import smtplib
 from email.message import EmailMessage
@@ -62,5 +62,18 @@ def handle_request():
     else:
         return "Invalid request"
 
+@app.route('/logs')
+def logs():
+    try:
+        # Open log file in read mode
+        with open('/var/log/messaging_system.log', 'r') as f:
+            # Read log content line by line
+            log_content = ''.join(f.readlines())
+    except FileNotFoundError:
+        log_content = "Log file not found."
+
+    # Return formatted response with HTML tags for basic styling
+    return f"<pre style='font-family:monospace; background-color:#eee; padding: 10px;'>{log_content}</pre>"
+    
 if __name__ == '__main__':
     app.run(debug=True)
