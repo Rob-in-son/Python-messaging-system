@@ -1,8 +1,10 @@
-from flask import Flask, request
+from flask import Flask, request, Response, stream_with_context
 from celery import Celery
 import smtplib
 from email.message import EmailMessage
 import logging
+import json
+import time
 from datetime import datetime
 from config import SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, CELERY_BROKER_URL, RESULT_BACKEND
 
@@ -20,17 +22,39 @@ def send_email(recipient):
     msg['From'] = SMTP_USERNAME 
     msg['To'] = recipient
 
-    with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-        # server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.send_message(msg)
+    try:
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(msg)
+        
+        # Log successful email send
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        logging.info(f"Email sent successfully to {recipient} at {current_time}")
+        return True
+    except Exception as e:
+        # Log email send failure
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        logging.error(f"Failed to send email to {recipient} at {current_time}. Error: {str(e)}")
+        return False
+
+def event_stream(task):
+    while True:
+        if task.ready():
+            if task.successful():
+                yield f"data: {json.dumps({'status': 'COMPLETED', 'message': 'Email sent successfully'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'status': 'FAILED', 'message': str(task.result)})}\n\n"
+            break
+        else:
+            yield f"data: {json.dumps({'status': 'PENDING', 'message': 'Email is being sent...'})}\n\n"
+        time.sleep(1)
 
 @app.route('/')
 def handle_request():
     if 'sendmail' in request.args:
         recipient = request.args.get('sendmail')
-        send_email.delay(recipient)
-        return f"Email task queued for {recipient}"
+        task = send_email.delay(recipient)
+        return Response(stream_with_context(event_stream(task)), content_type='text/event-stream')
     elif 'talktome' in request.args:
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         logging.info(f"Talktome request received at {current_time}")
