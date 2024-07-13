@@ -4,3 +4,5 @@ smtp_port = 587
 smtp_username = "your_username"
 smtp_password = "your_password"
 CELERY_BROKER_URL = "pyamqp://guest@localhost//"
+RESULT_BACKEND = "rpc://"
+EMAIL_USE_TLS = True
