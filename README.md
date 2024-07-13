@@ -102,6 +102,6 @@ ngrok http http://localhost:80
 
 ## Troubleshooting
 
-If you encounter permission issues with Nginx, make sure you're running it with sudo privileges.
-If emails are not being sent, check your SMTP settings in the config.py file.
-If Celery tasks are not being processed, ensure that RabbitMQ is running and the Celery worker is started.
+- If you encounter permission issues with Nginx, make sure you're running it with sudo privileges.
+- If emails are not being sent, check your SMTP settings in the config.py file.
+- If Celery tasks are not being processed, ensure that RabbitMQ is running and the Celery worker is started.
