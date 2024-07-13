@@ -4,24 +4,24 @@ import smtplib
 from email.message import EmailMessage
 import logging
 from datetime import datetime
-from config import SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, CELERY_BROKER_URL
+from config import SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, CELERY_BROKER_URL, RESULT_BACKEND
 
 app = Flask(__name__)
-celery = Celery("tasks", broker=CELERY_BROKER_URL)
+celery = Celery("app", broker=CELERY_BROKER_URL, result_backend=RESULT_BACKEND)
 
 # Configure logging
 logging.basicConfig(filename='/var/log/messaging_system.log', level=logging.INFO)
 
-@celery.task
+@celery.task(name='app.send_email')
 def send_email(recipient):
     msg = EmailMessage()
     msg.set_content("This is a test email")
     msg['Subject'] = "Test Email"
-    msg['From'] = SMTP_USERNAME  # Assuming SMTP_USERNAME is your email address
+    msg['From'] = SMTP_USERNAME 
     msg['To'] = recipient
 
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        server.starttls()
+    with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+        # server.starttls()
         server.login(SMTP_USERNAME, SMTP_PASSWORD)
         server.send_message(msg)
 
