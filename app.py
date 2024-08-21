@@ -13,11 +13,9 @@ from config import SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, CELERY_
 app = Flask(__name__)
 
 # Set up logging configuration
-# This will log all INFO level and above messages to the specified file
 logging.basicConfig(filename='/var/log/messaging_system.log', level=logging.INFO)
 
 # Initialize Celery with broker and result backend from config
-# This allows for asynchronous task processing
 celery = Celery("app", broker=CELERY_BROKER_URL, result_backend=RESULT_BACKEND)
 
 @celery.task(name='app.send_email')
@@ -39,16 +37,11 @@ def send_email(recipient):
     try:
         # Attempt to send the email using SMTP_SSL
         with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-            # Login to the SMTP server
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            # Send the email
             server.send_message(msg)
-        
-        # Log success and return True
         logging.info(f"Email sent successfully to {recipient} at {current_time}")
         return True
     except Exception as e:
-        # Log error and return False if sending fails
         logging.error(f"Failed to send email to {recipient} at {current_time}. Error: {str(e)}")
         return False
 
@@ -59,7 +52,6 @@ def event_stream(task):
     """
     while True:
         if task.ready():
-            # If task is completed, prepare and send final status
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             if task.successful():
                 status_message = {'status': 'COMPLETED', 'message': 'Email sent successfully'}
@@ -71,9 +63,7 @@ def event_stream(task):
             yield f"data: {json.dumps(status_message)}\n\n"
             break
         else:
-            # If task is still pending, send update
             yield f"data: {json.dumps({'status': 'PENDING', 'message': 'Email is being sent...'})}\n\n"
-        # Wait for 1 second before checking task status again
         time.sleep(1)
 
 @app.route('/')
@@ -82,23 +72,17 @@ def handle_request():
     Main route handler for the application.
     This function handles both 'sendmail' and 'talktome' requests.
     """
-    # Get current time for logging purposes
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     if 'sendmail' in request.args:
-        # Handle sendmail request
         recipient = request.args.get('sendmail')
-        # Queue the email sending task
         task = send_email.delay(recipient)
         logging.info(f"Email task queued for {recipient} at {current_time}")
-        # Return a streaming response for real-time updates
         return Response(stream_with_context(event_stream(task)), content_type='text/event-stream')
     elif 'talktome' in request.args:
-        # Handle talktome request
         logging.info(f"Talktome request received at {current_time}")
         return f"Logged current time: {current_time}"
     else:
-        # Handle invalid request
         logging.warning(f"Invalid request received at {current_time}")
         return "Invalid request"
 
@@ -109,12 +93,9 @@ def logs():
     This function reads and returns the content of the log file.
     """
     try:
-        # Attempt to open the log file
         with open('/var/log/messaging_system.log', 'r') as f:
-            # Read the entire log file content
             log_content = ''.join(f.readlines())
     except FileNotFoundError:
-        # Set an error message if the log file is not found
         log_content = "Log file not found."
 
     # Return the log content wrapped in HTML for basic styling
